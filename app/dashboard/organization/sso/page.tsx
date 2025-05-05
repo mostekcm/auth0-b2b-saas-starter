@@ -1,50 +1,11 @@
-import { appClient, managementClient } from "@/lib/auth0"
+import { getAllIdentityProviders, getConfig } from "@/lib/org"
 import { PageHeader } from "@/components/page-header"
 
 import { ConnectionsList } from "./connections-list"
 
-export interface Connection {
-  id: string
-  name: string
-  strategy: string
-  assign_membership_on_login: boolean
-}
-
 export default async function SSO() {
-  const session = await appClient.getSession()
-  const { connections } = await (async () => {
-    const result = await fetch("http://localhost:3001/org/providers", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session?.accessToken}`, // if needed
-      },
-    })
-
-    if (!result.ok) {
-      const errorBody = await result.text()
-      throw new Error(`Failed: ${result.status} ${errorBody}`)
-    }
-
-    return (await result.json()) as { connections: Connection[] }
-  })()
-
-  const componentConfig = await (async () => {
-    const result = await fetch("http://localhost:3001/org/config/providers", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session?.accessToken}`, // if needed
-      },
-    })
-
-    if (!result.ok) {
-      const errorBody = await result.text()
-      throw new Error(`Failed: ${result.status} ${errorBody}`)
-    }
-
-    return await result.json()
-  })()
+  const connections = await getAllIdentityProviders()
+  const componentConfig = await getConfig()
 
   return (
     <div className="space-y-2">

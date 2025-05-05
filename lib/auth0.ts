@@ -26,4 +26,19 @@ export const appClient = initAuth0({
   issuerBaseURL: `https://${process.env.NEXT_PUBLIC_AUTH0_DOMAIN}`,
   secret: process.env.SESSION_ENCRYPTION_SECRET,
   idpLogout: true,
+  authorizationParams: {
+    scope:
+      "openid profile email offline_access " +
+      [
+        "read:identity_providers",
+        "create:sso_access_tickets",
+        "read:members",
+        "update:members",
+        "read:member_roles",
+        "update:member_roles",
+        "create:member_invitations",
+        "read:member_invitations",
+        "delete:member_invitations",
+      ].join(" "),
+  },
 })

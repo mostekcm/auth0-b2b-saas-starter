@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { Session } from "@auth0/nextjs-auth0"
 
 import { managementClient } from "@/lib/auth0"
+import { createMemberInvitation } from "@/lib/org"
 import { Role, roles } from "@/lib/roles"
 import { withServerActionAuth } from "@/lib/with-server-action-auth"
 
@@ -32,23 +33,13 @@ export const createInvitation = withServerActionAuth(
     try {
       const roleId = roles[role]
 
-      await managementClient.organizations.createInvitation(
-        {
-          id: session.user.org_id,
+      // call orgs "SDK"
+      await createMemberInvitation({
+        roles: [roleId],
+        invitee: {
+          email,
         },
-        {
-          invitee: {
-            email,
-          },
-          inviter: {
-            name: session.user.name,
-          },
-          client_id: process.env.AUTH0_CLIENT_ID,
-          // if the roleId exists, then assign it. Regular members do not have a role assigned,
-          // only admins are assigned a specific role.
-          roles: roleId ? [roleId] : undefined,
-        }
-      )
+      })
 
       revalidatePath("/dashboard/organization/members")
     } catch (error) {

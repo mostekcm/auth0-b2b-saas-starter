@@ -3,6 +3,7 @@
 import { Session } from "@auth0/nextjs-auth0"
 
 import { verifyDnsRecords } from "@/lib/domain-verification"
+import { createIdentityProvider } from "@/lib/org"
 import { withServerActionAuth } from "@/lib/with-server-action-auth"
 
 export const verifyDomain = withServerActionAuth(
@@ -44,21 +45,7 @@ export const getTicketUrl = withServerActionAuth(
       display_name,
     }
 
-    const result = await fetch("http://localhost:3001/org/providers/tickets", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${await session.accessToken}`, // if needed
-      },
-      body: JSON.stringify(payload),
-    })
-
-    if (!result.ok) {
-      const errorBody = await result.text()
-      throw new Error(`Failed: ${result.status} ${errorBody}`)
-    }
-    const data = await result.json()
-    return data.ticket
+    return await createIdentityProvider(payload)
   },
   { role: "admin" }
 )
