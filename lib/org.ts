@@ -48,7 +48,7 @@ function buildUrlWithQuery(url: string, query?: Record<string, any>) {
 }
 
 async function call<BodyType, QueryType, ReturnType>(
-  method: "GET" | "PATCH" | "POST",
+  method: "GET" | "PATCH" | "POST" | "DELETE",
   url: string,
   options?: {
     query?: QueryType
@@ -57,11 +57,13 @@ async function call<BodyType, QueryType, ReturnType>(
 ): Promise<ReturnType> {
   const fullUrl = options?.query ? buildUrlWithQuery(url, options?.query) : url
 
+  const accessToken = (await appClient.getAccessToken()).token
+
   const result = await fetch(fullUrl, {
     method,
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${await getAccessToken()}`, // if needed
+      Authorization: `Bearer ${accessToken}`, // if needed
     },
     ...(options?.body ? { body: JSON.stringify(options.body) } : {}),
   })
@@ -103,21 +105,30 @@ async function post<QueryType, BodyType, ReturnType>(
   return call<BodyType, QueryType, ReturnType>("POST", url, options)
 }
 
-async function getAccessToken() {
-  const session = await appClient.getSession()
-  if (!session || !session.accessToken) {
-    throw new Error("No access token available")
+async function del<BodyType, ReturnType>(
+  url: string,
+  options?: {
+    body?: BodyType
   }
-
-  return session.accessToken
+) {
+  return call<BodyType, unknown, ReturnType>("DELETE", url, options)
 }
+
+// async function getAccessToken() {
+//   const session = await appClient.getSession()
+//   if (!session || !session.accessToken) {
+//     throw new Error("No access token available")
+//   }
+
+//   return session.accessToken
+// }
 
 async function getUrl(path: string) {
   const session = await appClient.getSession()
   if (!session || !session.user.org_id) {
     throw new Error("No user available")
   }
-  return `${process.env.MY_ORG_API_BASE}/org/${session.user.org_id}${path}`
+  return `${process.env.MY_ORG_API_BASE}/my-org${path}`
 }
 
 export const getConfig = async (): Promise<Config> => {
@@ -177,6 +188,11 @@ export interface Invitation {
   ticket_id: string
 }
 
+export const removeMemberFromOrg = async (userId: string) => {
+  const url = await getUrl(`/members/${userId}`)
+  await del(url)
+}
+
 export interface CreateInvitation {
   invitee: {
     email: string
@@ -206,4 +222,32 @@ export const createMemberInvitation = async (options: CreateInvitation) => {
   })
 
   return invitation
+}
+
+export const revokeMemberInvitation = async (invitationId: string) => {
+  const url = await getUrl(`/members/invitations/${invitationId}`)
+  await del(url)
+}
+
+export const getMemberRoles = async (userId: string): Promise<string[]> => {
+  const url = await getUrl(`/members/${userId}/roles`)
+  return await get(url)
+}
+
+export const assignMemberRoles = async (userId: string, roles: string[]) => {
+  const url = await getUrl(`/members/${userId}/roles`)
+  await post(url, {
+    body: {
+      roles,
+    },
+  })
+}
+
+export const revokeMemberRoles = async (userId: string, roles: string[]) => {
+  const url = await getUrl(`/members/${userId}/roles`)
+  await del(url, {
+    body: {
+      roles,
+    },
+  })
 }

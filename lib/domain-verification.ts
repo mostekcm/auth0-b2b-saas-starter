@@ -1,8 +1,8 @@
 import { randomBytes } from "node:crypto"
 import { resolveTxt } from "node:dns/promises"
 
-import { managementClient } from "./auth0"
 import { DOMAIN_VERIFICATION_RECORD_IDENTIFIER } from "./constants"
+import { managementClient } from "./managementClient"
 
 /**
  * getOrCreateDomainVerificationToken tries to fetch a domain verification token for an organization, if one exists.

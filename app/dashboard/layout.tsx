@@ -2,7 +2,8 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { SettingsIcon } from "lucide-react"
 
-import { appClient, managementClient } from "@/lib/auth0"
+import { appClient } from "@/lib/auth0"
+import { managementClient } from "@/lib/managementClient"
 import { Button } from "@/components/ui/button"
 import { Auth0Logo } from "@/components/auth0-logo"
 import { ModeToggle } from "@/components/mode-toggle"
@@ -18,7 +19,7 @@ export default async function DashboardLayout({
 
   // if the user is not authenticated, redirect to login
   if (!session?.user || !session.user.org_id) {
-    redirect("/api/auth/login")
+    redirect("/auth/login")
   }
 
   const { data: orgs } = await managementClient.users.getUserOrganizations({

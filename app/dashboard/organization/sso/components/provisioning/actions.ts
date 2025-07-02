@@ -1,10 +1,9 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { Session } from "@auth0/nextjs-auth0"
 
-import { managementClient } from "@/lib/auth0"
-import { withServerActionAuth } from "@/lib/with-server-action-auth"
+import { managementClient } from "@/lib/managementClient"
+import { OrgSession, withServerActionAuth } from "@/lib/with-server-action-auth"
 
 const connStrategyToSlug: {
   [key: string]: string
@@ -14,7 +13,7 @@ const connStrategyToSlug: {
 }
 
 export const createScimConfig = withServerActionAuth(
-  async function createScimConfig(connectionId: string, session: Session) {
+  async function createScimConfig(connectionId: string, session: OrgSession) {
     // ensure that the connection ID being updated is owned by the organization
     const { data: enabledConnection } =
       await managementClient.organizations.getEnabledConnection({
@@ -54,7 +53,13 @@ export const createScimConfig = withServerActionAuth(
 )
 
 export const deleteScimConfig = withServerActionAuth(
-  async function deleteScimConfig(connectionId: string, session: Session) {
+  async function deleteScimConfig(connectionId: string, session: OrgSession) {
+    if (!session?.user?.org_id) {
+      return {
+        error: "Must have an org_id in the user object in the session.",
+      }
+    }
+
     // ensure that the connection ID being updated is owned by the organization
     const { data: enabledConnection } =
       await managementClient.organizations.getEnabledConnection({
@@ -94,13 +99,19 @@ export const updateScimConfig = withServerActionAuth(
   async function updateScimConfig(
     connectionId: string,
     formData: FormData,
-    session: Session
+    session: OrgSession
   ) {
     const userIdAttribute = formData.get("user_id_attribute") as string
 
     if (!userIdAttribute || typeof userIdAttribute !== "string") {
       return {
         error: "User ID attribute is required.",
+      }
+    }
+
+    if (!session?.user?.org_id) {
+      return {
+        error: "Must have an org_id in the user object in the session.",
       }
     }
 
@@ -149,7 +160,13 @@ export const updateScimConfig = withServerActionAuth(
 )
 
 export const createScimToken = withServerActionAuth(
-  async function createScimToken(connectionId: string, session: Session) {
+  async function createScimToken(connectionId: string, session: OrgSession) {
+    if (!session?.user?.org_id) {
+      return {
+        error: "Must have an org_id in the user object in the session.",
+      }
+    }
+
     // ensure that the connection ID being updated is owned by the organization
     const { data: enabledConnection } =
       await managementClient.organizations.getEnabledConnection({
@@ -195,7 +212,7 @@ export const deleteScimToken = withServerActionAuth(
   async function deleteScimToken(
     connectionId: string,
     tokenId: string,
-    session: Session
+    session: OrgSession
   ) {
     // ensure that the connection ID being updated is owned by the organization
     const { data: enabledConnection } =

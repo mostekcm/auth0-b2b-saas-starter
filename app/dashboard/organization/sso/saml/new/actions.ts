@@ -2,15 +2,14 @@
 
 import crypto from "crypto"
 import { revalidatePath } from "next/cache"
-import { Session } from "@auth0/nextjs-auth0"
 import slugify from "@sindresorhus/slugify"
 
-import { managementClient } from "@/lib/auth0"
 import { verifyDnsRecords } from "@/lib/domain-verification"
-import { withServerActionAuth } from "@/lib/with-server-action-auth"
+import { managementClient } from "@/lib/managementClient"
+import { OrgSession, withServerActionAuth } from "@/lib/with-server-action-auth"
 
 export const createConnection = withServerActionAuth(
-  async function createConnection(formData: FormData, session: Session) {
+  async function createConnection(formData: FormData, session: OrgSession) {
     const displayName = formData.get("display_name")
     const signInUrl = formData.get("sign_in_url")
     const signOutUrl = formData.get("sign_out_url") // optional
@@ -119,7 +118,7 @@ export const createConnection = withServerActionAuth(
 )
 
 export const deleteConnection = withServerActionAuth(
-  async function deleteConnection(connectionId: string, session: Session) {
+  async function deleteConnection(connectionId: string, session: OrgSession) {
     if (!connectionId || typeof connectionId !== "string") {
       return {
         error: "Connection ID is required.",

@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation"
 import slugify from "@sindresorhus/slugify"
 
-import { managementClient, onboardingClient } from "@/lib/auth0"
+import { onboardingClient } from "@/lib/auth0"
+import { managementClient } from "@/lib/managementClient"
 
 export async function createOrganization(formData: FormData) {
   const session = await onboardingClient.getSession()
@@ -63,5 +64,5 @@ export async function createOrganization(formData: FormData) {
     returnTo: "/dashboard",
   })
 
-  redirect(`/api/auth/login?${authParams.toString()}`)
+  redirect(`/auth/login?${authParams.toString()}`)
 }

@@ -1,7 +1,5 @@
-import { Session } from "@auth0/nextjs-auth0"
-
 import { appClient } from "./auth0"
-import { getRole, Role } from "./roles"
+import { getRole, OrgSession, Role } from "./roles"
 
 interface Options {
   role?: Role
@@ -12,15 +10,16 @@ interface Options {
  * Optionally, if a role is supplied, then the user must have that role to invoke the Server Action.
  */
 export function withServerActionAuth<T extends any[], U extends any>(
-  serverActionWithSession: (...args: [...T, session: Session]) => U,
+  serverActionWithSession: (...args: [...T, session: OrgSession]) => U,
   options: Options
 ) {
   return async function (...args: T) {
-    const session = await appClient.getSession()
+    const session = await appClient.getOrgSession()
 
     if (!session) {
       return {
-        error: "You must be authenticated to perform this action.",
+        error:
+          "You must be authenticated with an org_id to perform this action.",
       }
     }
 
@@ -33,3 +32,4 @@ export function withServerActionAuth<T extends any[], U extends any>(
     return serverActionWithSession(...args, session)
   }
 }
+export type { OrgSession }

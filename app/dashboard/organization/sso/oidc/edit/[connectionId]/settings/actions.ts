@@ -1,17 +1,16 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { Session } from "@auth0/nextjs-auth0"
 
-import { managementClient } from "@/lib/auth0"
 import { verifyDnsRecords } from "@/lib/domain-verification"
-import { withServerActionAuth } from "@/lib/with-server-action-auth"
+import { managementClient } from "@/lib/managementClient"
+import { OrgSession, withServerActionAuth } from "@/lib/with-server-action-auth"
 
 export const updateConnection = withServerActionAuth(
   async function updateConnection(
     connectionId: string,
     formData: FormData,
-    session: Session
+    session: OrgSession
   ) {
     const displayName = formData.get("display_name")
     const discoveryUrl = formData.get("discovery_url")

@@ -1,6 +1,11 @@
-import { UserProfile } from "@auth0/nextjs-auth0/client"
+import { SessionData } from "@auth0/nextjs-auth0/types"
 
-const ROLES_CLAIM_KEY = `${process.env.CUSTOM_CLAIMS_NAMESPACE}/roles`
+type NonNullUser = NonNullable<SessionData["user"]>
+export type OrgNonNullUser = Omit<NonNullUser, "org_id"> & { org_id: string }
+
+export type OrgSession = Omit<SessionData, "user"> & {
+  user: OrgNonNullUser
+}
 
 export const roles = {
   member: process.env.AUTH0_MEMBER_ROLE_ID,
@@ -9,9 +14,9 @@ export const roles = {
 
 export type Role = keyof typeof roles
 
-export function getRole(user: UserProfile) {
+export function getRole(user: OrgNonNullUser) {
   // we only allow a single role to be assigned to a user
-  const role = (user[ROLES_CLAIM_KEY] as string[])[0]
+  const role = user.roles && user.roles[0]
 
   // if no role is assigned, set them to the default member role
   return role || "member"

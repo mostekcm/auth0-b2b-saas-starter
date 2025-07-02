@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 
-import { appClient, managementClient } from "@/lib/auth0"
+import { appClient } from "@/lib/auth0"
+import { managementClient } from "@/lib/managementClient"
 
 import { ScimForm } from "../../../../components/provisioning/scim-form"
 
@@ -9,10 +10,10 @@ export default async function Provisioning({
 }: {
   params: { connectionId: string }
 }) {
-  const session = await appClient.getSession()
+  const session = await appClient.getOrgSession()
 
   if (!session) {
-    return redirect("/api/auth/login")
+    return redirect("/auth/login")
   }
 
   // ensure that the connection ID being fetched is owned by the organization
