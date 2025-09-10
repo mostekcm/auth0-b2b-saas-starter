@@ -38,7 +38,7 @@ interface AccountLayoutProps {
 }
 
 export default async function AccountLayout({ children }: AccountLayoutProps) {
-  const session = await appClient.getSession()
+  const session = await appClient.getOrgSession()
 
   // if the user is not authenticated, redirect to login
   if (!session?.user) {

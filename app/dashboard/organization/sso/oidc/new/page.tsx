@@ -9,7 +9,7 @@ import { AppBreadcrumb } from "@/components/app-breadcrumb"
 import { CreateOidcConnectionForm } from "./create-oidc-connection-form"
 
 export default async function CreateOidcConnection() {
-  const session = await appClient.getSession()
+  const session = await appClient.getOrgSession()
 
   const domainVerificationToken = await getOrCreateDomainVerificationToken(
     session!.user.org_id

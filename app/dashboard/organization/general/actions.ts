@@ -1,13 +1,12 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { SessionData } from "@auth0/nextjs-auth0/types"
 
-import { managementClient } from "@/lib/managementClient"
-import { withServerActionAuth } from "@/lib/with-server-action-auth"
+import { myOrgServerClient } from "@/lib/myOrgClient"
+import { OrgSession, withServerActionAuth } from "@/lib/with-server-action-auth"
 
 export const updateDisplayName = withServerActionAuth(
-  async function updateDisplayName(formData: FormData, session: SessionData) {
+  async function updateDisplayName(formData: FormData, session: OrgSession) {
     const displayName = formData.get("display_name")
 
     if (!displayName || typeof displayName !== "string") {
@@ -16,21 +15,10 @@ export const updateDisplayName = withServerActionAuth(
       }
     }
 
-    if (!session.user?.org_id) {
-      return {
-        error: "Must have an org_id in the user object in the session.",
-      }
-    }
-
     try {
-      await managementClient.organizations.update(
-        {
-          id: session.user.org_id,
-        },
-        {
-          display_name: displayName,
-        }
-      )
+      await myOrgServerClient.organizationDetails.update({
+        display_name: displayName,
+      })
 
       revalidatePath("/", "layout")
     } catch (error) {

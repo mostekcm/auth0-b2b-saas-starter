@@ -27,7 +27,7 @@
     "@radix-ui/react-switch": "^1.0.3",
     "@sindresorhus/slugify": "^2.2.1",
     "auth0": "^4.7.0",
-    "auth0-myorg-ts-sdk": "file:../auth-provider-for-sdk/auth0-myorg-ts-sdk",
+    "auth0-myorg-ts-sdk": "file:../auth0-myorg-ts-sdk",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",

@@ -1,13 +1,11 @@
 "use server"
 
-import { Session } from "@auth0/nextjs-auth0"
-
 import { verifyDnsRecords } from "@/lib/domain-verification"
 import { createIdentityProvider } from "@/lib/org"
-import { withServerActionAuth } from "@/lib/with-server-action-auth"
+import { OrgSession, withServerActionAuth } from "@/lib/with-server-action-auth"
 
 export const verifyDomain = withServerActionAuth(
-  async function verifyDomain(domain: string, session: Session) {
+  async function verifyDomain(domain: string, session: OrgSession) {
     if (!domain || typeof domain !== "string") {
       return {
         error: "Domain is required.",
@@ -36,7 +34,7 @@ export const getTicketUrl = withServerActionAuth(
     assign_membership_on_login: boolean,
     show_as_button: boolean,
     display_name: string | null,
-    session: Session
+    session: OrgSession
   ) {
     const payload = {
       name,

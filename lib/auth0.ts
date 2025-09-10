@@ -69,19 +69,18 @@ export const appClient = new OrgAuth0Client({
   // idpLogout: true,
   signInReturnToPath: "/dashboard",
   authorizationParameters: {
-    scope:
-      "openid profile email offline_access " +
-      [
-        "read:identity_providers",
-        "create:sso_access_tickets",
-        "read:members",
-        "update:members",
-        "read:member_roles",
-        "update:member_roles",
-        "create:member_invitations",
-        "read:member_invitations",
-        "delete:member_invitations",
-      ].join(" "),
+    scope: "openid profile email offline_access ", // +
+    // [
+    //   "read:identity_providers",
+    //   "create:sso_access_tickets",
+    //   "read:members",
+    //   "update:members",
+    //   "read:member_roles",
+    //   "update:member_roles",
+    //   "create:member_invitations",
+    //   "read:member_invitations",
+    //   "delete:member_invitations",
+    // ].join(" "),
     audience: process.env.AUTH0_AUDIENCE,
   },
   async beforeSessionSaved(session, idToken) {

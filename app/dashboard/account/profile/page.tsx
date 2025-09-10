@@ -16,7 +16,7 @@ export default appClient.withPageAuthRequired(
           description="Manage your personal information."
         />
 
-        <DisplayNameForm displayName={session?.user.name} />
+        <DisplayNameForm displayName={session?.user.name || ""} />
 
         <DeleteAccountForm />
       </div>

@@ -3,7 +3,7 @@ import { SessionData } from "@auth0/nextjs-auth0/types"
 type NonNullUser = NonNullable<SessionData["user"]>
 export type OrgNonNullUser = Omit<NonNullUser, "org_id"> & { org_id: string }
 
-export type OrgSession = Omit<SessionData, "user"> & {
+export type OrgSession = SessionData & {
   user: OrgNonNullUser
 }
 
