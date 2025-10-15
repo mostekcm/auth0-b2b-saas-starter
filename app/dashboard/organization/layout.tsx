@@ -31,6 +31,10 @@ const sidebarNavItems = [
     title: "Security Policies",
     href: "/dashboard/organization/security-policies",
   },
+  {
+    title: "Subscription",
+    href: "/dashboard/organization/subscription",
+  },
 ]
 
 interface AccountLayoutProps {
