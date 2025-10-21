@@ -46,12 +46,12 @@ export const SubscriptionGate: React.FC<SubscriptionGateProps> = ({
   }
 
   // Check for subscription claim using the custom claims namespace from your env
-  const customClaimsNamespace = "https://example.com" // From your .env.local CUSTOM_CLAIMS_NAMESPACE
-  const subscription =
-    user[`${customClaimsNamespace}/subscription`] || user.subscription
+  const { sf_org_id, skus: skusAsString } = user
+
+  console.log("carlos, user before subscription gate: ", user)
 
   // If subscription is null, empty string, or "none", show subscription selection
-  if (!subscription || subscription === "" || subscription === "none") {
+  if (!sf_org_id || !skusAsString) {
     return <SubscriptionSelectionScreen />
   }
 

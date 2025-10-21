@@ -1,8 +1,7 @@
 "use server"
 
-import { redirect } from "next/navigation"
-
-import { appClient, managementClient } from "@/lib/auth0"
+import { managementClient } from "@/lib/auth0"
+import { getSalesforceIdByPlanName } from "@/lib/salesforce-api"
 
 export interface SubscriptionData {
   plan: string
@@ -41,13 +40,27 @@ export async function submitSubscriptionAction(
       )
     }
 
-    // Update Auth0 organization metadata with subscription
+    // Get Salesforce SKU ID for the selected plan
+    const salesforceId = await getSalesforceIdByPlanName(subscriptionData.plan)
+    console.log(`Salesforce ID for ${subscriptionData.plan}:`, salesforceId)
+
+    // Get organization details for account name
+    const { data: org } = await managementClient.organizations.get({
+      id: subscriptionData.orgId,
+    })
+
+    // Update Auth0 organization metadata with subscription and Salesforce data
     await managementClient.organizations.update(
       { id: subscriptionData.orgId },
       {
         metadata: {
           subscription: subscriptionData.plan.toLowerCase().replace(" ", "_"),
           subscriptionDate: new Date().toISOString(),
+          accountName: org.display_name || org.name,
+          accountEmail: subscriptionData.paymentData.email,
+          skus: salesforceId
+            ? JSON.stringify([salesforceId])
+            : JSON.stringify([]),
         },
       }
     )
@@ -167,13 +180,28 @@ export async function processPayment(
 // Action to change/update subscription plan
 export async function changeSubscriptionAction(orgId: string, newPlan: string) {
   try {
-    // Update Auth0 organization metadata with new subscription
+    // Get Salesforce SKU ID for the new plan
+    const salesforceId = await getSalesforceIdByPlanName(newPlan)
+    console.log(`Salesforce ID for ${newPlan}:`, salesforceId)
+
+    // Get current organization data to preserve account name and email
+    const { data: org } = await managementClient.organizations.get({
+      id: orgId,
+    })
+
+    // Update Auth0 organization metadata with new subscription and preserved data
     await managementClient.organizations.update(
       { id: orgId },
       {
         metadata: {
           subscription: newPlan.toLowerCase().replace(" ", "_"),
           subscriptionDate: new Date().toISOString(),
+          accountName:
+            org.metadata?.accountName || org.display_name || org.name,
+          accountEmail: org.metadata?.accountEmail || "",
+          skus: salesforceId
+            ? JSON.stringify([salesforceId])
+            : JSON.stringify([]),
         },
       }
     )

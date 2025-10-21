@@ -1,6 +1,7 @@
-import { CalendarIcon, CreditCardIcon, MailIcon, UsersIcon } from "lucide-react"
+import { CalendarIcon, CreditCardIcon, DollarSignIcon } from "lucide-react"
 
 import { appClient, managementClient } from "@/lib/auth0"
+import { getSkuBySalesforceId } from "@/lib/salesforce-api"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,7 +14,11 @@ import {
 import { PageHeader } from "@/components/page-header"
 
 import { ChangeSubscriptionForm } from "./change-subscription-form"
-import { UsageStats } from "./usage-stats"
+import { EntitlementsDisplay } from "./entitlements-display"
+
+// Force dynamic rendering to avoid caching entitlements data
+export const dynamic = "force-dynamic"
+export const revalidate = 0
 
 export default async function SubscriptionPage() {
   const session = await appClient.getSession()
@@ -33,69 +38,83 @@ export default async function SubscriptionPage() {
     include_fields: true,
   })
 
-  // Get subscription details from organization metadata
-  const subscription = org.metadata?.subscription || "none"
+  // Get subscription details from organization metadata - use SKUs instead of subscription
+  const skusJson = org.metadata?.skus
+  let currentSku = null
+  let isActive = false
+
+  if (skusJson) {
+    try {
+      const skusArray = JSON.parse(skusJson)
+      if (Array.isArray(skusArray) && skusArray.length > 0) {
+        // Get the first SKU ID from the array
+        const firstSkuId = skusArray[0]
+        currentSku = await getSkuBySalesforceId(firstSkuId)
+        isActive = !!currentSku
+      }
+    } catch (error) {
+      console.error("Failed to parse SKUs metadata:", error)
+    }
+  }
+
   const subscriptionDate = org.metadata?.subscriptionDate
 
-  // Format subscription display name
-  const getSubscriptionDisplayName = (sub: string) => {
-    switch (sub) {
-      case "free_trial":
-        return "Free Trial"
-      case "starter":
-        return "Starter"
-      case "pro":
-        return "Pro"
-      default:
-        return "No Subscription"
-    }
+  // Format subscription display name based on SKU
+  const getSubscriptionDisplayName = (sku: any) => {
+    if (!sku) return "No Subscription"
+    return sku.skuName
   }
 
-  // Get subscription details
-  const getSubscriptionDetails = (sub: string) => {
-    switch (sub) {
-      case "free_trial":
-        return {
-          price: "FREE",
-          priceNote: "14-day trial",
-          users: "1 User",
-          emails: "50 emails/month",
-          color: "bg-green-100 text-green-800",
-        }
-      case "starter":
-        return {
-          price: "$30",
-          priceNote: "/month",
-          users: "5 Users",
-          emails: "500 emails/month",
-          color: "bg-blue-100 text-blue-800",
-        }
-      case "pro":
-        return {
-          price: "$100",
-          priceNote: "/month",
-          users: "20 Users",
-          emails: "2000 emails/month",
-          color: "bg-purple-100 text-purple-800",
-        }
-      default:
-        return {
-          price: "N/A",
-          priceNote: "",
-          users: "No access",
-          emails: "No access",
-          color: "bg-gray-100 text-gray-800",
-        }
-    }
+  // Get plan display name for legacy compatibility
+  const getLegacyPlanId = (sku: any) => {
+    if (!sku) return "none"
+
+    const name = sku.skuName.toLowerCase()
+    if (name.includes("free") || name.includes("trial")) return "free_trial"
+    if (name.includes("starter")) return "starter"
+    if (name.includes("pro") || name.includes("professional")) return "pro"
+    return "custom"
   }
 
-  const subscriptionDetails = getSubscriptionDetails(subscription)
-  const isActive = subscription !== "none" && subscription !== ""
+  const legacyPlanId = getLegacyPlanId(currentSku)
+
+  const formatPrice = (sku: any) => {
+    if (!sku) return "N/A"
+
+    if (sku.skuPricing.USD === 0) {
+      return "FREE"
+    }
+
+    // Format annual value as monthly if needed
+    const monthlyPrice = Math.round(sku.annualValue / 12)
+    return sku.annualValue > 0 ? `$${monthlyPrice}` : `$${sku.skuPricing.USD}`
+  }
+
+  const getPriceNote = (sku: any) => {
+    if (!sku) return ""
+
+    if (sku.skuPricing.USD === 0) {
+      return "14-day trial"
+    }
+    return "/month"
+  }
+
+  const getBadgeColor = (sku: any) => {
+    if (!sku) return "bg-gray-100 text-gray-800"
+
+    const name = sku.skuName.toLowerCase()
+    if (name.includes("free") || name.includes("trial"))
+      return "bg-green-100 text-green-800"
+    if (name.includes("starter")) return "bg-blue-100 text-blue-800"
+    if (name.includes("pro") || name.includes("professional"))
+      return "bg-purple-100 text-purple-800"
+    return "bg-blue-100 text-blue-800" // default
+  }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`Subscription${isActive ? ` - ${getSubscriptionDisplayName(subscription)}` : ""}`}
+        title={`Subscription${isActive ? ` - ${getSubscriptionDisplayName(currentSku)}` : ""}`}
         description={`Manage ${org.display_name || org.name}&apos;s subscription and billing.`}
       />
 
@@ -112,19 +131,32 @@ export default async function SubscriptionPage() {
                 Your organization&apos;s current subscription status
               </CardDescription>
             </div>
-            <Badge className={subscriptionDetails.color}>
-              {getSubscriptionDisplayName(subscription)}
+            <Badge className={getBadgeColor(currentSku)}>
+              {getSubscriptionDisplayName(currentSku)}
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {isActive ? (
             <>
-              <UsageStats
-                orgId={session.user.org_id}
-                subscription={subscription}
-                memberCount={members.length}
-              />
+              {/* Plan Pricing Information */}
+              <div className="flex items-start gap-4">
+                <div className="flex items-baseline gap-1">
+                  <div className="text-3xl font-bold text-gray-900">
+                    {formatPrice(currentSku)}
+                  </div>
+                  <div className="mb-1 text-sm text-gray-500">
+                    {getPriceNote(currentSku)}
+                  </div>
+                </div>
+                {currentSku && (
+                  <div className="mt-2 flex-1">
+                    <div className="text-sm text-gray-600">
+                      {currentSku.description}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {subscriptionDate && (
                 <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -158,83 +190,16 @@ export default async function SubscriptionPage() {
         </CardContent>
       </Card>
 
-      {/* Subscription Features */}
-      {isActive && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Plan Features</CardTitle>
-            <CardDescription>
-              Features included with your{" "}
-              {getSubscriptionDisplayName(subscription)} plan
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {subscription === "free_trial" && (
-                <>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                    <span>Basic Dashboard</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                    <span>Email Support</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                    <span>API Access</span>
-                  </div>
-                </>
-              )}
-
-              {subscription === "starter" && (
-                <>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                    <span>Advanced Analytics</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                    <span>Priority Support</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                    <span>Team Collaboration</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                    <span>API Access</span>
-                  </div>
-                </>
-              )}
-
-              {subscription === "pro" && (
-                <>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-purple-500"></div>
-                    <span>Custom Integrations</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-purple-500"></div>
-                    <span>24/7 Support</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-purple-500"></div>
-                    <span>Advanced Security</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-purple-500"></div>
-                    <span>Unlimited API Access</span>
-                  </div>
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Entitlements Display */}
+      {isActive && org.metadata?.sf_org_id && (
+        <EntitlementsDisplay
+          orgId={org.metadata.sf_org_id}
+          memberCount={members.length}
+        />
       )}
 
       {/* Trial Warning for Free Trial */}
-      {subscription === "free_trial" && subscriptionDate && (
+      {legacyPlanId === "free_trial" && subscriptionDate && (
         <Card className="border-orange-200 bg-orange-50">
           <CardHeader>
             <CardTitle className="text-orange-800">Trial Period</CardTitle>
@@ -268,7 +233,7 @@ export default async function SubscriptionPage() {
 
       {/* Change Subscription Form */}
       <ChangeSubscriptionForm
-        currentSubscription={subscription}
+        currentSubscription={legacyPlanId}
         orgId={session.user.org_id}
       />
     </div>
